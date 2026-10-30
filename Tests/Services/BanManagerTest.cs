@@ -1,4 +1,4 @@
-#nullable enable
+﻿#nullable enable
 
 using Fail2Ban4Win.Config;
 using Fail2Ban4Win.Data;
@@ -379,6 +379,28 @@ public class BanManagerTest: IDisposable {
             return result;
         }
 
+    }
+
+    [Fact]
+    public void explicitMysticBanUsesOneEventAndStillHonorsWhitelist() {
+        configuration.neverBanReservedSubnets=false;
+        banManager.BanAddress(IPAddress.Parse("1.2.3.4")).Should().BeTrue();
+        firewallRules.Should().HaveCount(1);
+        banManager.BanAddress(IPAddress.Parse("1.2.3.4")).Should().BeFalse();
+        firewallRules.Should().HaveCount(1);
+        banManager.UnbanAddress(IPAddress.Parse("1.2.3.4"));
+        firewallRules.Should().BeEmpty();
+        banManager.BanAddress(IPAddress.Loopback).Should().BeFalse();
+        banManager.BanAddress(IPAddress.IPv6Loopback).Should().BeFalse();
+    }
+    [Fact]
+    public void explicitMysticIpv6BanCanBeUnbanned() {
+        configuration.neverBanReservedSubnets=false;
+        var ip=IPAddress.Parse("2001:db8::5");
+        banManager.BanAddress(ip).Should().BeTrue();
+        firewallRules.Should().HaveCount(1);
+        banManager.UnbanAddress(ip);
+        firewallRules.Should().BeEmpty();
     }
 
     public void Dispose() {

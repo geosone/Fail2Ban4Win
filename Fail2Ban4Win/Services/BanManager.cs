@@ -48,7 +48,7 @@ public sealed class BanManagerImpl: BanManager {
         this.firewall         = firewall;
         this.pluginManager    = pluginManager;
 
-        if(configuration.mysticHook.enabled && configuration.mysticHook.synchronizeDenyList) {
+        if(!configuration.isDryRun && configuration.mysticHook.enabled && configuration.mysticHook.synchronizeDenyList) {
             if(string.IsNullOrWhiteSpace(configuration.mysticHook.mysticRoot) || !System.IO.Path.IsPathRooted(configuration.mysticHook.mysticRoot)) throw new ArgumentException("Configure an absolute mysticHook:mysticRoot.");
             string data=System.IO.Path.Combine(configuration.mysticHook.mysticRoot,"data");
             if(!System.IO.Directory.Exists(data)) throw new ArgumentException("Mystic data directory does not exist.");
