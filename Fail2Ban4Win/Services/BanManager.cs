@@ -120,6 +120,7 @@ public sealed class BanManagerImpl: BanManager {
         if(address.IsIPv4MappedToIPv6) address=address.MapToIPv4();
         int width=address.AddressFamily==AddressFamily.InterNetworkV6?128:32;
         int removed=configuration.banSubnetBits??0;
+        if(address.AddressFamily==AddressFamily.InterNetworkV6 && removed!=0) throw new NotSupportedException("IPv6 currently requires individual-address bans.");
         if(removed>width) throw new ArgumentException("Invalid ban subnet size.");
         return IPNetwork2.Parse(address,IPNetwork2.ToNetmask((byte)(width-removed),address.AddressFamily));
     }
@@ -127,6 +128,7 @@ public sealed class BanManagerImpl: BanManager {
     public bool UnbanAddress(IPAddress address) { unban(Subnet(address)); mysticDenyList?.Set(address,false); return true; }
     private void onFailure(object sender, FailureParams failure) => ProcessFailure(failure,false);
     private bool ProcessFailure(FailureParams failure,bool force) {
+        if(IPAddress.IsLoopback(failure.Sender)) return false;
         foreach (IFail2Ban4WinPlugin plugin in pluginManager.Plugins) {
             plugin.OnAuthFailureDetected(failure);
         }

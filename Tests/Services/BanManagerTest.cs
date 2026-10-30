@@ -384,6 +384,7 @@ public class BanManagerTest: IDisposable {
     [Fact]
     public void explicitMysticBanUsesOneEventAndStillHonorsWhitelist() {
         configuration.neverBanReservedSubnets=false;
+        configuration.banSubnetBits=0;
         banManager.BanAddress(IPAddress.Parse("1.2.3.4")).Should().BeTrue();
         firewallRules.Should().HaveCount(1);
         banManager.BanAddress(IPAddress.Parse("1.2.3.4")).Should().BeFalse();
@@ -396,6 +397,7 @@ public class BanManagerTest: IDisposable {
     [Fact]
     public void explicitMysticIpv6BanCanBeUnbanned() {
         configuration.neverBanReservedSubnets=false;
+        configuration.banSubnetBits=0;
         var ip=IPAddress.Parse("2001:db8::5");
         banManager.BanAddress(ip).Should().BeTrue();
         firewallRules.Should().HaveCount(1);
