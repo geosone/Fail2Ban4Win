@@ -12,6 +12,7 @@ if(!(Test-Path (Join-Path $BuildDirectory 'third-party-notices/DEPENDENCIES.txt'
 Copy-Item (Join-Path $BuildDirectory 'third-party-notices') $payload -Recurse
 Copy-Item (Join-Path $root 'License.txt') $payload
 Copy-Item (Join-Path $root 'Readme.md') $payload
+Copy-Item (Join-Path $PSScriptRoot 'FORK-NOTICE.txt') $payload
 Copy-Item (Join-Path $PSScriptRoot 'configuration.ini') $payload
 # Keep logging outside Program Files. NLog expands the specialfolder renderer.
 $nlog=[IO.File]::ReadAllText((Join-Path $root 'Fail2Ban4Win/Logging/NLog.config')).Replace('value="logs"','value="${specialfolder:folder=CommonApplicationData}/Fail2Ban4Win/logs"')
@@ -42,7 +43,7 @@ foreach($file in Get-ChildItem $payload -File -Recurse | Sort-Object FullName){
  $index++;$id="C$index";$attrs=@{Id=$id;Guid=(G "$Architecture/$relative")}
  if($Architecture -eq 'x64'){$attrs.Win64='yes'}
  $parent=$directories[$key]
- if($file.Name -eq 'configuration.ini'){$parent=$data;$attrs.Permanent='yes';$attrs.NeverOverwrite='yes'}
+ if($file.Name -eq 'configuration.ini'){$parent=$data;$attrs.Permanent='yes'}
  $component=E $parent Component $attrs
  $null=E $component File @{Id="F$index";Source=$file.FullName;KeyPath='yes'}
  if($file.Name -eq 'Fail2Ban4Win.exe'){
@@ -57,4 +58,5 @@ $msi=Join-Path $output "Fail2Ban4Win-1.5.0-ini-windows-$Architecture-test1.msi"
 & wixl -a $Architecture -o $msi $wxs
 if($LASTEXITCODE -ne 0){throw 'MSI build failed.'}
 [IO.File]::WriteAllText("$msi.sha256",(Get-FileHash $msi -Algorithm SHA256).Hash.ToLowerInvariant()+"  $([IO.Path]::GetFileName($msi))`n")
+Write-Warning 'Finalize with Finalize-WindowsMsi.ps1 on Windows before distribution.'
 $msi

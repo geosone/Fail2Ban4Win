@@ -1,3 +1,4 @@
+// Modified for the geosone fork: INI configuration / dependency compatibility, 2026-10-30.
 #nullable enable
 
 using Fail2Ban4Win.Config;
