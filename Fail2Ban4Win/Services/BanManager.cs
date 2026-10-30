@@ -53,7 +53,10 @@ public sealed class BanManagerImpl: BanManager {
             string data=System.IO.Path.Combine(configuration.mysticHook.mysticRoot,"data");
             if(!System.IO.Directory.Exists(data)) throw new ArgumentException("Mystic data directory does not exist.");
             string state=System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),"Fail2Ban4Win","mystic-denylist-pending.ini");
-            mysticDenyList=new MysticDenyList(System.IO.Path.Combine(data,"denylist.txt"),state);
+            string denyPath=configuration.mysticHook.denyListPath??System.IO.Path.Combine(data,"denylist.txt");
+            string root=System.IO.Path.GetFullPath(configuration.mysticHook.mysticRoot).TrimEnd(System.IO.Path.DirectorySeparatorChar)+System.IO.Path.DirectorySeparatorChar;
+            if(!System.IO.Path.GetFullPath(denyPath).StartsWith(root,StringComparison.OrdinalIgnoreCase)) throw new ArgumentException("Mystic denylist must be inside its configured root.");
+            mysticDenyList=new MysticDenyList(denyPath,state);
         }
 
         eventLogListener.failure += onFailure;

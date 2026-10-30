@@ -61,6 +61,7 @@ public sealed class MysticControlServer: IDisposable {
         return null;
     }
     public string Dispatch(string command) {
+        if(command=="status") return config.isDryRun?"DRYRUN MYSTIC-HOOK-1":"OK MYSTIC-HOOK-1";
         string[] parts=command.Split(' ');
         if(parts.Length!=2 || (parts[0]!="ban" && parts[0]!="unban") || !TryAddress(parts[1],out IPAddress? address)) return "ERROR";
         if(config.isDryRun) return "DRYRUN";
