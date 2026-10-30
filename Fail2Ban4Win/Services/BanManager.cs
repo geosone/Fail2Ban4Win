@@ -54,7 +54,7 @@ public sealed class BanManagerImpl: BanManager {
             string data=System.IO.Path.Combine(configuration.mysticHook.mysticRoot,"data");
             if(!System.IO.Directory.Exists(data)) throw new ArgumentException("Mystic data directory does not exist.");
             string state=System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),"Fail2Ban4Win","mystic-denylist-pending.ini");
-            string denyPath=configuration.mysticHook.denyListPath??System.IO.Path.Combine(data,"denylist.txt");
+            string denyPath=string.IsNullOrWhiteSpace(configuration.mysticHook.denyListPath)?System.IO.Path.Combine(data,"denylist.txt"):configuration.mysticHook.denyListPath!;
             string root=System.IO.Path.GetFullPath(configuration.mysticHook.mysticRoot).TrimEnd(System.IO.Path.DirectorySeparatorChar)+System.IO.Path.DirectorySeparatorChar;
             if(!System.IO.Path.GetFullPath(denyPath).StartsWith(root,StringComparison.OrdinalIgnoreCase)) throw new ArgumentException("Mystic denylist must be inside its configured root.");
             mysticDenyList=new MysticDenyList(denyPath,state,configuration.mysticHook.unbanInMystic);
@@ -114,7 +114,6 @@ public sealed class BanManagerImpl: BanManager {
                 }
             }
 
-            initialRuleDeletionDone.Set();
         } catch (Exception e) when (e is not OutOfMemoryException) {
             initializationError=e;
             LOGGER.Error(e, "Uncaught exception in {func}", nameof(init));

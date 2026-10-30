@@ -40,7 +40,7 @@ public sealed class MysticDenyList: IDisposable {
     public static void Update(string path,IPAddress ip,bool ban) {
         byte[] before=File.Exists(path)?File.ReadAllBytes(path):Array.Empty<byte>();
         Encoding encoding=Encoding.GetEncoding(28591);string text=encoding.GetString(before);
-        string newline=text.Contains("\r\n")?"\r\n":"\n";
+        string newline=text.Length==0?Environment.NewLine:(text.Contains("\r\n")?"\r\n":"\n");
         string[] lines=text.Split(new[]{"\r\n","\n"},StringSplitOptions.None);
         bool Matches(string line)=>IPAddress.TryParse(line.Trim(),out IPAddress? existing) && (existing.IsIPv4MappedToIPv6?existing.MapToIPv4():existing).Equals(ip);
         if(ban && lines.Any(Matches)) return;
