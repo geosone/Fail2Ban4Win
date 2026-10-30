@@ -1,6 +1,10 @@
 using System;
 using System.IO;
 using System.Net;
+using System.IO.Pipes;
+using System.Security.Principal;
+using System.Text;
+using System.Threading.Tasks;
 using Fail2Ban4Win.Config;
 using Fail2Ban4Win.Services;
 using FakeItEasy;
@@ -8,6 +12,30 @@ using Xunit;
 
 namespace Tests.Services;
 public sealed class MysticHookTest {
+    [Fact]
+    public async Task PipeReplySurvivesDelayedClientReadAndReconnect(){
+        string name="MysticHookTest-"+Guid.NewGuid().ToString("N");
+        var config=new Configuration {isDryRun=true};
+        config.mysticHook.enabled=true;config.mysticHook.pipeName=name;
+        config.mysticHook.allowedClientSid=WindowsIdentity.GetCurrent().User!.Value;
+        using var server=new MysticControlServer(A.Fake<BanManager>(),config);server.Start();
+        for(int i=0;i<3;i++){
+            using var client=new NamedPipeClientStream(".",name,PipeDirection.InOut,PipeOptions.Asynchronous);
+            client.Connect(5000);
+            byte[] request=Encoding.ASCII.GetBytes("status\n");await client.WriteAsync(request,0,request.Length);
+            await Task.Delay(75);
+            StringBuilder reply=new();byte[] one=new byte[1];
+            while(true){
+                Task<int> read=client.ReadAsync(one,0,1);
+                Assert.Same(read,await Task.WhenAny(read,Task.Delay(5000)));
+                Assert.Equal(1,await read);
+                if(one[0]==10)break;
+                reply.Append((char)one[0]);Assert.True(reply.Length<128);
+            }
+            Assert.Equal("DRYRUN MYSTIC-HOOK-1",reply.ToString());
+            byte[] ack=Encoding.ASCII.GetBytes("ACK\n");await client.WriteAsync(ack,0,ack.Length);
+        }
+    }
     [Theory]
     [InlineData("1.2.3.4",true)]
     [InlineData("2001:db8::1",true)]
