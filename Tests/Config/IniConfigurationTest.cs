@@ -14,7 +14,8 @@ public sealed class IniConfigurationTest {
             var configuration = ConfigurationModule.LoadConfiguration(path);
             Assert.True(configuration.isDryRun);
             Assert.Equal(4, configuration.maxAllowedFailures);
-            Assert.Equal(0, configuration.banSubnetBits);
+            Assert.Equal<byte?>((byte)0, configuration.banSubnetBits);
+            Assert.Single(configuration.eventLogSelectors);
         } finally { File.Delete(path); }
     }
 }
