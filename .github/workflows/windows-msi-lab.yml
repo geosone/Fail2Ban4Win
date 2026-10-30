@@ -19,14 +19,17 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           dotnet test Tests/Tests.csproj --no-build --configuration Debug --logger 'trx;LogFileName=results.trx'
           exit $LASTEXITCODE
+      - name: Build release
+        shell: powershell
+        run: ./packaging/windows/Build-Windows.ps1 -Configuration Release
       - name: Collect dependency licenses
         shell: powershell
-        run: ./packaging/windows/Get-NugetNotices.ps1 -OutputDirectory Fail2Ban4Win/bin/Debug/third-party-notices
+        run: ./packaging/windows/Get-NugetNotices.ps1 -OutputDirectory Fail2Ban4Win/bin/Release/third-party-notices
       - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: Fail2Ban4Win-msi-lab
           path: |
-            Fail2Ban4Win/bin/Debug/
+            Fail2Ban4Win/bin/Release/
             Fail2Ban4Win/packages.lock.json
             Tests/TestResults/*.trx
