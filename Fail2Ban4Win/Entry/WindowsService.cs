@@ -1,6 +1,7 @@
 #nullable enable
 
 using Fail2Ban4Win.Logging;
+using Fail2Ban4Win.Config;
 using Fail2Ban4Win.Services;
 using LightInject;
 using System.Reflection;
@@ -12,6 +13,7 @@ public sealed partial class WindowsService: ServiceBase {
 
     private ServiceContainer? context;
     private Scope?            scope;
+    private MysticControlServer? mysticControl;
 
     public WindowsService() {
         InitializeComponent();
@@ -23,10 +25,13 @@ public sealed partial class WindowsService: ServiceBase {
         context.RegisterAssembly(Assembly.GetCallingAssembly());
         scope = context.BeginScope();
 
-        scope.GetInstance<BanManager>();
+        var manager=scope.GetInstance<BanManager>();
+        mysticControl=new MysticControlServer(manager,scope.GetInstance<Configuration>());
+        mysticControl.Start();
     }
 
     protected override void OnStop() {
+        mysticControl?.Dispose();
         scope?.Dispose();
         context?.Dispose();
     }

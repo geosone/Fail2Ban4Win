@@ -9,6 +9,8 @@ namespace Fail2Ban4Win.Config;
 
 public sealed class Configuration: ICloneable {
 
+    public MysticHookConfiguration mysticHook { get; set; } = new();
+
     public bool isDryRun { get; set; }
     public int maxAllowedFailures { get; set; } = 9;
     public TimeSpan failureWindow { get; set; } = TimeSpan.FromDays(1);
@@ -65,4 +67,11 @@ public sealed class EventLogSelector: ICloneable {
         eventPredicate          = eventPredicate
     };
 
+}
+public sealed class MysticHookConfiguration {
+    public bool enabled { get; set; }
+    public string pipeName { get; set; } = "Fail2Ban4Win.Mystic";
+    public string? allowedClientSid { get; set; }
+    public string? mysticRoot { get; set; }
+    public bool synchronizeDenyList { get; set; } = true;
 }

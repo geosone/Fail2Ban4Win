@@ -18,7 +18,10 @@ using WindowsFirewallHelper.FirewallRules;
 
 namespace Fail2Ban4Win.Services;
 
-public interface BanManager: IDisposable;
+public interface BanManager: IDisposable {
+    bool BanAddress(IPAddress address);
+    bool UnbanAddress(IPAddress address);
+}
 
 public sealed class BanManagerImpl: BanManager {
 
@@ -33,7 +36,7 @@ public sealed class BanManagerImpl: BanManager {
     private readonly Configuration                       configuration;
     private readonly FirewallFacade                      firewall;
     private readonly IPluginManager<IFail2Ban4WinPlugin> pluginManager;
-    private readonly IPAddress                           subnetMask;
+    private readonly MysticDenyList? mysticDenyList;
 
     private readonly ConcurrentDictionary<IPNetwork2, SubnetFailureHistory> failures                = new();
     private readonly CancellationTokenSource                                cancellationTokenSource = new();
@@ -45,7 +48,13 @@ public sealed class BanManagerImpl: BanManager {
         this.firewall         = firewall;
         this.pluginManager    = pluginManager;
 
-        subnetMask = IPNetwork2.ToNetmask((byte) (32 - (this.configuration.banSubnetBits ?? 0)), AddressFamily.InterNetwork);
+        if(configuration.mysticHook.enabled && configuration.mysticHook.synchronizeDenyList) {
+            if(string.IsNullOrWhiteSpace(configuration.mysticHook.mysticRoot) || !System.IO.Path.IsPathRooted(configuration.mysticHook.mysticRoot)) throw new ArgumentException("Configure an absolute mysticHook:mysticRoot.");
+            string data=System.IO.Path.Combine(configuration.mysticHook.mysticRoot,"data");
+            if(!System.IO.Directory.Exists(data)) throw new ArgumentException("Mystic data directory does not exist.");
+            string state=System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),"Fail2Ban4Win","mystic-denylist-pending.ini");
+            mysticDenyList=new MysticDenyList(System.IO.Path.Combine(data,"denylist.txt"),state);
+        }
 
         eventLogListener.failure += onFailure;
 
@@ -86,6 +95,7 @@ public sealed class BanManagerImpl: BanManager {
                                     firewall.Rules.Remove(oldRule);
                                 }
 
+                                if(!configuration.isDryRun) mysticDenyList?.Set(ban.Subnet.Network,false);
                                 foreach (IFail2Ban4WinPlugin plugin in pluginManager.Plugins) {
                                     plugin.OnBanLifted(ban);
                                 }
@@ -106,19 +116,29 @@ public sealed class BanManagerImpl: BanManager {
         }
     }
 
-    private void onFailure(object sender, FailureParams failure) {
+    private IPNetwork2 Subnet(IPAddress address) {
+        if(address.IsIPv4MappedToIPv6) address=address.MapToIPv4();
+        int width=address.AddressFamily==AddressFamily.InterNetworkV6?128:32;
+        int removed=configuration.banSubnetBits??0;
+        if(removed>width) throw new ArgumentException("Invalid ban subnet size.");
+        return IPNetwork2.Parse(address,IPNetwork2.ToNetmask((byte)(width-removed),address.AddressFamily));
+    }
+    public bool BanAddress(IPAddress address) => ProcessFailure(new FailureParams(address,"Mystic IP Blocked","Mystic",0,"MIS",DateTimeOffset.Now),true);
+    public bool UnbanAddress(IPAddress address) { unban(Subnet(address)); mysticDenyList?.Set(address,false); return true; }
+    private void onFailure(object sender, FailureParams failure) => ProcessFailure(failure,false);
+    private bool ProcessFailure(FailureParams failure,bool force) {
         foreach (IFail2Ban4WinPlugin plugin in pluginManager.Plugins) {
             plugin.OnAuthFailureDetected(failure);
         }
 
-        IPNetwork2           subnet            = IPNetwork2.Parse(failure.Sender, subnetMask);
+        IPNetwork2           subnet            = Subnet(failure.Sender);
         SubnetFailureHistory failuresForSubnet = failures.GetOrAdd(subnet, _ => new ArrayListSubnetFailureHistory(configuration.maxAllowedFailures));
         BanParams?           ban               = null;
 
         lock (failuresForSubnet) {
             failuresForSubnet.add(DateTimeOffset.Now);
 
-            if (shouldBan(subnet, failuresForSubnet)) {
+            if (shouldBan(subnet, failuresForSubnet, force)) {
                 ban = this.ban(subnet, failuresForSubnet);
             }
         }
@@ -127,18 +147,20 @@ public sealed class BanManagerImpl: BanManager {
             foreach (IFail2Ban4WinPlugin plugin in pluginManager.Plugins) {
                 plugin.OnSubnetBanned(ban.Value);
             }
+            if(!configuration.isDryRun) mysticDenyList?.Set(ban.Value.Subnet.Network,true);
         }
+        return ban is not null;
     }
 
     // this runs inside a lock on the SubnetFailureHistory
-    private bool shouldBan(IPNetwork2 subnet, SubnetFailureHistory clientFailureHistory) {
+    private bool shouldBan(IPNetwork2 subnet, SubnetFailureHistory clientFailureHistory, bool force = false) {
         if (subnet.IsIANAReserved() && configuration.neverBanReservedSubnets) {
             LOGGER.Debug("Not banning {subnet} because it is contained in an IANA-reserved block such as {reserved1}. To ban anyway, set {config} to false.", subnet, IPNetwork2.IANA_CBLK_RESERVED1,
                 nameof(configuration.neverBanReservedSubnets));
             return false;
         }
 
-        if (LOOPBACK.Contains(subnet)) {
+        if (IPAddress.IsLoopback(subnet.Network) || (subnet.AddressFamily == AddressFamily.InterNetwork && LOOPBACK.Contains(subnet))) {
             LOGGER.Debug("Not banning {subnet} because it is a loopback address", subnet);
             return false;
         }
@@ -151,7 +173,7 @@ public sealed class BanManagerImpl: BanManager {
         }
 
         int recentFailureCount = clientFailureHistory.countFailuresSinceAndPrune(DateTimeOffset.Now - configuration.failureWindow);
-        if (recentFailureCount <= configuration.maxAllowedFailures) {
+        if (!force && recentFailureCount <= configuration.maxAllowedFailures) {
             LOGGER.Debug("Not banning {subnet} because it has only failed {count} times in the last {window}, which does not exceed the maximum {max} failures allowed", subnet, recentFailureCount,
                 configuration.failureWindow, configuration.maxAllowedFailures);
             return false;
@@ -233,6 +255,7 @@ public sealed class BanManagerImpl: BanManager {
             foreach (IFail2Ban4WinPlugin plugin in pluginManager.Plugins) {
                 plugin.OnBanLifted(ban);
             }
+            if(!configuration.isDryRun) mysticDenyList?.Set(ban.Subnet.Network,false);
         }
     }
 
@@ -251,7 +274,7 @@ public sealed class BanManagerImpl: BanManager {
 
     private static string generateRuleName(IPNetwork2 subnet) => $"Banned {subnet}";
 
-    private static readonly Regex BAN_NAME_PATTERN = new(@"^Banned (?<subnet>[\d\./]+?)$");
+    private static readonly Regex BAN_NAME_PATTERN = new(@"^Banned (?<subnet>[0-9A-Fa-f:./]+?)$");
 
     private static IPNetwork2? parseRuleName(string name) =>
         BAN_NAME_PATTERN.Match(name) is { Success: true } match && IPNetwork2.TryParse(match.Groups["subnet"].Value, out IPNetwork2? subnet) ? subnet : null;
@@ -263,6 +286,7 @@ public sealed class BanManagerImpl: BanManager {
     public void Dispose() {
         eventLogListener.failure -= onFailure;
         cancellationTokenSource.Cancel();
+        mysticDenyList?.Dispose();
         initialRuleDeletionDone.Dispose();
     }
 

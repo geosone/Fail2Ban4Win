@@ -1,7 +1,7 @@
 name: Windows MSI laboratory
 on:
   push:
-    branches: [windows/ini-msi]
+    branches: [windows/ini-msi, windows/mystic-log-adapter]
   workflow_dispatch:
 jobs:
   build:

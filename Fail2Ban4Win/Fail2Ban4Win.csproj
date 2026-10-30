@@ -64,6 +64,8 @@
     <Compile Include="Data\ArrayListSubnetFailureHistory.cs" />
     <Compile Include="Logging\UnfuckedValueFormatter.cs" />
     <Compile Include="Services\BanManager.cs" />
+    <Compile Include="Services\MysticControlServer.cs" />
+    <Compile Include="Services\MysticDenyList.cs" />
     <Compile Include="Services\EventLogListener.cs" />
     <Compile Include="Entry\WindowsService.cs">
       <SubType>Component</SubType>
