@@ -19,6 +19,9 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           dotnet test Tests/Tests.csproj --no-build --configuration Debug --logger 'trx;LogFileName=results.trx'
           exit $LASTEXITCODE
+      - name: Collect dependency licenses
+        shell: powershell
+        run: ./packaging/windows/Get-NugetNotices.ps1 -OutputDirectory Fail2Ban4Win/bin/Debug/third-party-notices
       - uses: actions/upload-artifact@v7
         if: always()
         with:
