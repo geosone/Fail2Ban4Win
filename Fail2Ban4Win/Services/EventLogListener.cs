@@ -99,11 +99,11 @@ public sealed class EventLogListenerImpl: EventLogListener {
     private static string selectorToQuery(EventLogSelector selector) {
         StringBuilder queryBuilder = new($"*[System/EventID={selector.eventId}]");
 
-        if (selector.source.HasText) {
+        if (!string.IsNullOrWhiteSpace(selector.source)) {
             queryBuilder.Append($"[System/Provider/@Name=\"{SecurityElement.Escape(selector.source)}\"]");
         }
 
-        if (selector.eventPredicate.HasText) {
+        if (!string.IsNullOrWhiteSpace(selector.eventPredicate)) {
             queryBuilder.Append(selector.eventPredicate);
         }
 
