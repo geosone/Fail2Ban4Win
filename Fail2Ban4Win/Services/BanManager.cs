@@ -250,12 +250,14 @@ public sealed class BanManagerImpl: BanManager {
         IEnumerable<FirewallWASRule> rulesToRemove = firewall.Rules.Where(isBanRule(subnet)).ToList(); //eagerly evaluate Where clause to prevent concurrent modification below
         IList<BanParams>             unbanned      = [];
         foreach (FirewallWASRule rule in rulesToRemove) {
+            // Native COM-backed rule properties must be read before deletion.
+            BanParams? parsed = parseBan(rule);
             LOGGER.Info("Ban has expired for subnet {subnet}, removing firewall rule {name}", subnet, rule.Name);
             if (!configuration.isDryRun) {
                 firewall.Rules.Remove(rule);
             }
 
-            if (parseBan(rule) is {} ban) {
+            if (parsed is {} ban) {
                 unbanned.Add(ban);
             }
         }
@@ -264,8 +266,10 @@ public sealed class BanManagerImpl: BanManager {
             foreach (IFail2Ban4WinPlugin plugin in pluginManager.Plugins) {
                 plugin.OnBanLifted(ban);
             }
-            if(!configuration.isDryRun) mysticDenyList?.Set(ban.Subnet.Network,false);
         }
+        // The exact subnet being lifted is already known. Mystic cleanup must
+        // not depend on parsing optional/localized firewall description text.
+        if(!configuration.isDryRun) mysticDenyList?.Set(subnet.Network,false);
     }
 
     private static Func<FirewallWASRule, bool> isBanRule(IPNetwork2? subnet = null) {
