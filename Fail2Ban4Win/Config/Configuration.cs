@@ -28,7 +28,7 @@ public sealed class Configuration: ICloneable {
 
     public object Clone() => new Configuration {
         isDryRun                      = isDryRun,
-        mysticHook = new MysticHookConfiguration {enabled=mysticHook.enabled, pipeName=mysticHook.pipeName, allowedClientSid=mysticHook.allowedClientSid, mysticRoot=mysticHook.mysticRoot, denyListPath=mysticHook.denyListPath, synchronizeDenyList=mysticHook.synchronizeDenyList},
+        mysticHook = new MysticHookConfiguration {enabled=mysticHook.enabled, pipeName=mysticHook.pipeName, allowedClientSid=mysticHook.allowedClientSid, mysticRoot=mysticHook.mysticRoot, denyListPath=mysticHook.denyListPath, synchronizeDenyList=mysticHook.synchronizeDenyList, unbanInMystic=mysticHook.unbanInMystic},
         maxAllowedFailures            = maxAllowedFailures,
         failureWindow                 = failureWindow,
         banPeriod                     = banPeriod,
@@ -75,5 +75,6 @@ public sealed class MysticHookConfiguration {
     public string? allowedClientSid { get; set; }
     public string? mysticRoot { get; set; }
     public string? denyListPath { get; set; }
+    public bool unbanInMystic { get; set; } = true;
     public bool synchronizeDenyList { get; set; } = true;
 }

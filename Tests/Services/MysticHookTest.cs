@@ -58,4 +58,13 @@ public sealed class MysticHookTest {
             Assert.DoesNotContain("192.0.2.5=ban",File.ReadAllText(state));
         }finally{Directory.Delete(dir,true);}
     }
+    [Fact]
+    public void UnbanInMysticFalsePreservesDenylist(){
+        string dir=Path.Combine(Path.GetTempPath(),Guid.NewGuid().ToString());Directory.CreateDirectory(dir);string path=Path.Combine(dir,"denylist.txt");
+        try{
+            File.WriteAllText(path,"192.0.2.5\n");
+            using(var action=new MysticDenyList(path,Path.Combine(dir,"pending.ini"),false)){action.Set(IPAddress.Parse("192.0.2.5"),false);action.Retry();}
+            Assert.Equal("192.0.2.5\n",File.ReadAllText(path));
+        }finally{Directory.Delete(dir,true);}
+    }
 }

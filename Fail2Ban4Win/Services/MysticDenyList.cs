@@ -9,11 +9,13 @@ namespace Fail2Ban4Win.Services;
 /// <summary>Persistent, idempotent action queue. A locked Mystic file is retried, never unlocked forcibly.</summary>
 public sealed class MysticDenyList: IDisposable {
     private readonly string path,state;
+    private readonly bool allowUnban;
     private readonly Dictionary<string,bool> pending=new(StringComparer.OrdinalIgnoreCase);
     private readonly object sync=new();
     private readonly Timer timer;
     private static readonly Logger Log=LogManager.GetCurrentClassLogger();
-    public MysticDenyList(string path,string state) {
+    public MysticDenyList(string path,string state,bool allowUnban=true) {
+        this.allowUnban=allowUnban;
         this.path=path;this.state=state;
         if(File.Exists(state)) foreach(string line in File.ReadAllLines(state)) {
             if(line=="[Pending]" || string.IsNullOrWhiteSpace(line)) continue;
@@ -23,10 +25,10 @@ public sealed class MysticDenyList: IDisposable {
         }
         timer=new Timer(_=>Retry(),null,5000,5000);
     }
-    public void Set(IPAddress ip,bool ban) { lock(sync) { pending[ip.ToString()]=ban;Save();Retry(); } }
+    public void Set(IPAddress ip,bool ban) { if(!ban && !allowUnban) return; lock(sync) { pending[ip.ToString()]=ban;Save();Retry(); } }
     public void Retry() {
         lock(sync) foreach(var operation in pending.ToArray()) {
-            try { Update(path,IPAddress.Parse(operation.Key),operation.Value);pending.Remove(operation.Key);Save(); }
+            try { if(!operation.Value && !allowUnban){pending.Remove(operation.Key);Save();continue;} Update(path,IPAddress.Parse(operation.Key),operation.Value);pending.Remove(operation.Key);Save(); }
             catch(IOException e) { Log.Warn("Mystic denylist is busy/unavailable; queued action retained: {error}",e.Message); }
             catch(UnauthorizedAccessException e) { Log.Warn("Mystic denylist action needs filesystem permission; queued action retained: {error}",e.Message); }
         }

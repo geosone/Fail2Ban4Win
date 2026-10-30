@@ -38,6 +38,7 @@ public sealed class BanManagerImpl: BanManager {
     private readonly IPluginManager<IFail2Ban4WinPlugin> pluginManager;
     private readonly MysticDenyList? mysticDenyList;
 
+    private Exception? initializationError;
     private readonly ConcurrentDictionary<IPNetwork2, SubnetFailureHistory> failures                = new();
     private readonly CancellationTokenSource                                cancellationTokenSource = new();
     private readonly ManualResetEventSlim                                   initialRuleDeletionDone = new(false);
@@ -56,7 +57,7 @@ public sealed class BanManagerImpl: BanManager {
             string denyPath=configuration.mysticHook.denyListPath??System.IO.Path.Combine(data,"denylist.txt");
             string root=System.IO.Path.GetFullPath(configuration.mysticHook.mysticRoot).TrimEnd(System.IO.Path.DirectorySeparatorChar)+System.IO.Path.DirectorySeparatorChar;
             if(!System.IO.Path.GetFullPath(denyPath).StartsWith(root,StringComparison.OrdinalIgnoreCase)) throw new ArgumentException("Mystic denylist must be inside its configured root.");
-            mysticDenyList=new MysticDenyList(denyPath,state);
+            mysticDenyList=new MysticDenyList(denyPath,state,configuration.mysticHook.unbanInMystic);
         }
 
         eventLogListener.failure += onFailure;
@@ -115,7 +116,10 @@ public sealed class BanManagerImpl: BanManager {
 
             initialRuleDeletionDone.Set();
         } catch (Exception e) when (e is not OutOfMemoryException) {
+            initializationError=e;
             LOGGER.Error(e, "Uncaught exception in {func}", nameof(init));
+        } finally {
+            if(!cancellationTokenSource.IsCancellationRequested) initialRuleDeletionDone.Set();
         }
     }
 
@@ -196,7 +200,8 @@ public sealed class BanManagerImpl: BanManager {
     private BanParams ban(IPNetwork2 subnet, SubnetFailureHistory clientFailureHistory) {
         clientFailureHistory.banCount++;
 
-        initialRuleDeletionDone.Wait(cancellationTokenSource.Token);
+        if(!initialRuleDeletionDone.Wait(3000,cancellationTokenSource.Token)) throw new TimeoutException("Firewall initialization is not ready.");
+        if(initializationError is not null) throw new InvalidOperationException("Firewall initialization failed.",initializationError);
 
         DateTimeOffset now           = DateTimeOffset.Now;
         TimeSpan       unbanDuration = getUnbanDuration(clientFailureHistory.banCount);
