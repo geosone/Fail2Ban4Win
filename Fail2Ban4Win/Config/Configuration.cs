@@ -18,7 +18,7 @@ public sealed class Configuration: ICloneable {
     public ICollection<IPNetwork2>? neverBanSubnets { get; set; }
     public bool neverBanReservedSubnets { get; set; } = true;
     public bool unbanAllOnStartup { get; set; } = true;
-    public ICollection<EventLogSelector> eventLogSelectors { get; set; } = null!;
+    public ICollection<EventLogSelector> eventLogSelectors { get; set; } = new List<EventLogSelector>();
 
     public override string ToString() =>
         $"{nameof(maxAllowedFailures)}: {maxAllowedFailures}, {nameof(failureWindow)}: {failureWindow}, {nameof(banPeriod)}: {banPeriod}, {nameof(banSubnetBits)}: {banSubnetBits}, {nameof(banRepeatedOffenseCoefficient)}: {banRepeatedOffenseCoefficient}, {nameof(banRepeatedOffenseMax)}: {banRepeatedOffenseMax}, {nameof(neverBanSubnets)}: [{{{string.Join("}, {", neverBanSubnets ?? Array.Empty<IPNetwork2>())}}}], {nameof(neverBanReservedSubnets)}: {neverBanReservedSubnets}, {nameof(unbanAllOnStartup)}: {unbanAllOnStartup}, {nameof(eventLogSelectors)}: [{{{string.Join("}, {", eventLogSelectors)}}}], {nameof(isDryRun)}: {isDryRun}";

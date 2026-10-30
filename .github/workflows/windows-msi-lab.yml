@@ -1,0 +1,29 @@
+name: Windows MSI laboratory
+on:
+  push:
+    branches: [windows/ini-msi]
+  workflow_dispatch:
+jobs:
+  build:
+    runs-on: windows-2022
+    steps:
+      - uses: actions/checkout@v6
+      - uses: microsoft/setup-msbuild@30375c66a4eea26614e0d39710365f22f8b0af57
+      - name: Build fork
+        shell: powershell
+        run: ./packaging/windows/Build-Windows.ps1 -Configuration Debug
+      - name: Test
+        shell: powershell
+        run: |
+          msbuild Tests/Tests.csproj /restore /p:RestoreLockedMode=false /p:Configuration=Debug /verbosity:minimal
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          dotnet test Tests/Tests.csproj --no-build --configuration Debug --logger 'trx;LogFileName=results.trx'
+          exit $LASTEXITCODE
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: Fail2Ban4Win-msi-lab
+          path: |
+            Fail2Ban4Win/bin/Debug/
+            Fail2Ban4Win/packages.lock.json
+            Tests/TestResults/*.trx
