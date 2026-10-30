@@ -46,4 +46,16 @@ public sealed class MysticHookTest {
             Assert.Equal("# manual\r\n11.2.3.4\r\n1.2.3.4\r\n",File.ReadAllText(path));
         } finally{Directory.Delete(dir,true);}
     }
+    [Fact]
+    public void LockedDenylistQueuesAndRecoversAfterRestart(){
+        string dir=Path.Combine(Path.GetTempPath(),Guid.NewGuid().ToString());Directory.CreateDirectory(dir);
+        string path=Path.Combine(dir,"denylist.txt"),state=Path.Combine(dir,"pending.ini");File.WriteAllText(path,"# manual\r\n");
+        try{
+            using(var locked=File.Open(path,FileMode.Open,FileAccess.ReadWrite,FileShare.None))
+            using(var action=new MysticDenyList(path,state)){action.Set(IPAddress.Parse("192.0.2.5"),true);Assert.Contains("192.0.2.5=ban",File.ReadAllText(state));}
+            using(var action=new MysticDenyList(path,state)){action.Retry();}
+            Assert.Contains("192.0.2.5",File.ReadAllText(path));
+            Assert.DoesNotContain("192.0.2.5=ban",File.ReadAllText(state));
+        }finally{Directory.Delete(dir,true);}
+    }
 }
