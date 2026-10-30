@@ -22,6 +22,8 @@ foreach($framework in $lock.dependencies.PSObject.Properties){
   $license=$metadata.SelectSingleNode('//*[local-name()="metadata"]/*[local-name()="license"]')
   if(!$notices -and $license -and $license.type -eq 'expression'){
    Invoke-WebRequest -UseBasicParsing -Uri ('https://licenses.nuget.org/'+[uri]::EscapeDataString($license.InnerText)) -OutFile (Join-Path $entry 'LICENSE.txt')
+  } elseif(!$notices -and $id -eq 'WindowsFirewallHelper' -and $version -eq '2.2.0.86'){
+   Copy-Item (Join-Path $PSScriptRoot '../third-party/WindowsFirewallHelper-2.2.0.86-LICENSE.txt') (Join-Path $entry 'LICENSE.txt')
   } elseif(!$notices -and (!$license -or $license.type -ne 'file')){throw "License text needs manual review: $id $version"}
   if($license -and $license.type -eq 'file'){
    $licensePath=Join-Path $package $license.InnerText

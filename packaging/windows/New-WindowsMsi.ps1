@@ -19,7 +19,7 @@ $nlog=[IO.File]::ReadAllText((Join-Path $root 'Fail2Ban4Win/Logging/NLog.config'
 $xml=[xml]'<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi" />';$ns=$xml.DocumentElement.NamespaceURI
 function E($Parent,$Name,$Attributes){$n=$xml.CreateElement($Name,$ns);foreach($k in $Attributes.Keys){$n.SetAttribute($k,[string]$Attributes[$k])};$null=$Parent.AppendChild($n);return ,$n}
 function G([string]$s){$hash=[Convert]::ToHexString([Security.Cryptography.SHA256]::HashData([Text.Encoding]::UTF8.GetBytes($s)));return ([guid]($hash.Substring(0,8)+'-'+$hash.Substring(8,4)+'-5'+$hash.Substring(13,3)+'-8'+$hash.Substring(17,3)+'-'+$hash.Substring(20,12))).ToString()}
-$product=E $xml.DocumentElement Product @{Id=(G "product/test1/$Architecture");Name="Fail2Ban4Win INI test 1 ($Architecture)";Language='1033';Version='1.4.101';Manufacturer='Fail2Ban4Win contributors';UpgradeCode=(G "upgrade/$Architecture")}
+$product=E $xml.DocumentElement Product @{Id=(G "product/test1/$Architecture");Name="Fail2Ban4Win INI test 1 ($Architecture)";Language='1033';Version='1.5.1';Manufacturer='Fail2Ban4Win contributors';UpgradeCode=(G "upgrade/$Architecture")}
 $null=E $product Package @{InstallerVersion='500';Compressed='yes';InstallScope='perMachine'}
 $null=E $product Media @{Id='1';Cabinet='payload.cab';EmbedCab='yes'}
 $property=E $product Property @{Id='NETFRAMEWORK45'}
@@ -53,7 +53,7 @@ foreach($file in Get-ChildItem $payload -File -Recurse | Sort-Object FullName){
  $null=E $feature ComponentRef @{Id=$id}
 }
 $wxs=Join-Path $output 'Fail2Ban4Win.wxs';$xml.Save($wxs)
-$msi=Join-Path $output "Fail2Ban4Win-1.4.1-ini-windows-$Architecture-test1.msi"
+$msi=Join-Path $output "Fail2Ban4Win-1.5.0-ini-windows-$Architecture-test1.msi"
 & wixl -a $Architecture -o $msi $wxs
 if($LASTEXITCODE -ne 0){throw 'MSI build failed.'}
 [IO.File]::WriteAllText("$msi.sha256",(Get-FileHash $msi -Algorithm SHA256).Hash.ToLowerInvariant()+"  $([IO.Path]::GetFileName($msi))`n")
