@@ -1,3 +1,7 @@
+> geosone fork: Windows INI/MSI test packages and validation are described in
+> [packaging/windows/README.md](packaging/windows/README.md). Mystic text-log
+> ingestion is a separate task; the installed service is disabled by default.
+
 <img src="https://raw.githubusercontent.com/Aldaviva/Fail2Ban4Win/master/Fail2Ban4Win/pifmgr_37.ico" height="32" alt="Fail2Ban4Win logo" /> Fail2Ban4Win
 ===
 

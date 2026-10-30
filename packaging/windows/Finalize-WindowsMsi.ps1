@@ -18,4 +18,4 @@ $view=$database.OpenView("UPDATE ``Component`` SET ``Attributes``=$attributes WH
 $database.Commit()
 [Runtime.InteropServices.Marshal]::FinalReleaseComObject($database) | Out-Null
 [Runtime.InteropServices.Marshal]::FinalReleaseComObject($installer) | Out-Null
-(Get-FileHash $MsiPath -Algorithm SHA256).Hash.ToLowerInvariant()
+'MSI finalized. Compute SHA256 after this PowerShell process exits.'
