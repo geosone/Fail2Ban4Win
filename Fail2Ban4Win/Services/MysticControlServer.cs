@@ -41,6 +41,11 @@ public sealed class MysticControlServer: IDisposable {
                     byte[] reply=Encoding.ASCII.GetBytes(response+"\n");
                     await pipe.WriteAsync(reply,0,reply.Length,stop.Token);
                     await pipe.FlushAsync(stop.Token);
+                    // Flush is not a delivery acknowledgement for Windows pipes.
+                    // Disconnecting immediately can discard the buffered reply.
+                    // Wait for a bounded client acknowledgement (or EOF) instead
+                    // of blocking indefinitely in WaitForPipeDrain.
+                    await ReadCommand(pipe);
                 } catch (Exception e) when (e is not OutOfMemoryException) {
                     if (!stop.IsCancellationRequested) Log.Error(e,"Mystic control request failed");
                 } finally { if (pipe.IsConnected) pipe.Disconnect(); }
