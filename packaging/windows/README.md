@@ -1,9 +1,9 @@
-# Windows INI / MSI test build
+# Windows INI / MSI build
 
 This fork is based on Aldaviva/Fail2Ban4Win development commit
 `aea9e9132ddafdfce843029cbefbf2fb3bf7b7fb`. Apache-2.0 applies; see License.txt.
-The upstream assembly is developing 1.5.0. These packages are fork test builds,
-not an official upstream 1.5.0 release. Runtime remains .NET Framework 4.7.2+.
+The upstream assembly is developing 1.5.0. The fork releases its own version
+(1.5.3), which is not an upstream release. Runtime remains .NET Framework 4.7.2+.
 .NET 10 is not required by this program.
 
 ## Settings and behavior
@@ -18,9 +18,11 @@ User-created config, logs and plugin files are not deleted blindly.
 The shipped configuration is `isDryRun=true`, no event selectors, individual
 IP addresses (banSubnetBits=0), reserved-subnet whitelist and no startup
 unban-all. Do not enable bans before configuring and testing selectors for
-trusted authentication events. Upstream handles Windows Event Log. Mystic
-text-log ingestion is still a separate adapter task; installing this package
-alone does not protect Mystic's Telnet/SSH logins.
+trusted authentication events. Upstream handles Windows Event Log. For Mystic
+the fork adds a protected local ban hook (control pipe) and keeps Mystic's deny
+list in step with firewall bans; the mysticd installer's fail2ban component
+wires the hook. Installing this package alone does not protect Mystic's
+Telnet/SSH logins until the hook is configured and dry-run is turned off.
 
 The service currently uses LocalSystem, as the upstream program does.
 Unprivileged users must not be able to modify configuration, plugins or
@@ -59,10 +61,13 @@ Get-FileHash <candidate.msi> -Algorithm SHA256
 The native finalizer sets NeverOverwrite for the configuration component
 because wixl 0.106 ignores that WiX attribute. Hash after process exit so COM
 record/view lifetimes cannot keep the MSI locked while reading its checksum.
-MSI version 1.5.1 means the fork's 1.5.0 test build 1, not an upstream version.
-Uninstall older test packages before replacing them; automatic upgrade is
-not qualified. x86 and x64 packages share the same service name and must not
-be installed side by side.
+The MSI version and file name come from the executable's file version
+(`Fail2Ban4Win-1.5.3-windows-<arch>.msi`). Test MSIs 1.5.1 and 1.5.2 were fork
+test builds of 1.5.0. A release replaces an installed test or older release MSI
+of the same architecture (major upgrade) and keeps the edited configuration.ini;
+downgrades are refused. The upgrade reinstalls the service with startup
+disabled, so re-enable it afterwards if it was active. x86 and x64 packages
+share the same service name and must not be installed side by side.
 
 ## Validation
 

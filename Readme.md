@@ -1,6 +1,7 @@
-> geosone fork: Windows INI/MSI test packages and validation are described in
-> [packaging/windows/README.md](packaging/windows/README.md). Mystic text-log
-> ingestion is a separate task; the installed service is disabled by default.
+> geosone fork: Windows INI/MSI packages and validation are described in
+> [packaging/windows/README.md](packaging/windows/README.md). The fork adds a
+> protected local ban hook for Mystic and a Mystic deny-list action; the
+> installed service is disabled and in dry-run mode by default.
 
 <img src="https://raw.githubusercontent.com/Aldaviva/Fail2Ban4Win/master/Fail2Ban4Win/pifmgr_37.ico" height="32" alt="Fail2Ban4Win logo" /> Fail2Ban4Win
 ===
